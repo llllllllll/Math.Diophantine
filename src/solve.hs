@@ -1,10 +1,17 @@
 -- Joe Jevnik
 -- 20.2013
 -- Diophantine equation solver.
+module Diophantine
+    ( Equation(..)
+    , Solution(..)
+    , parse_eq     -- :: String -> Equation
+    , solve        -- :: Equation -> Solution
+    ) where
 
 import Control.Arrow ((***))
 import Data.List ((\\),nub)
 import Data.Ratio
+import Text.Regex.TDFA ((=~))
 
 -- -------------------------------------------------------------------------- --
 -- data types.
@@ -17,6 +24,7 @@ data Equation = Equation Z Z Z Z Z Z
               | SimpleHyperbolicEquation Z Z Z Z
               | ElipticalEquation Z Z Z Z Z Z
               | ParabolicEquation Z Z Z Z Z Z
+                deriving Show
 
 -- The result data, All_Z meaning that all pairs of integers work, NoSolutions
 -- means that no element of ZxZ satisfies the equation, and a SolutionSet is an
@@ -28,6 +36,47 @@ instance Show Solution where
     show All_Z            = "All_Z"
     show NoSolutions      = "NoSolutions"
     show (SolutionSet ns) = show ns
+
+-- -------------------------------------------------------------------------- --
+-- exported functions.
+
+-- Reads an equation from a string.
+parse_eq :: String -> Equation
+parse_eq cs = let a = parse (cs =~ "(\\+|-)* *[0-9]*x\\^2"            :: String)
+                  b = parse (cs =~ "(\\+|-)* *[0-9]*xy"               :: String)
+                  c = parse (cs =~ "(\\+|-)* *[0-9]*y\\^2"            :: String)
+                  d = parse (cs =~ "(\\+|-)* *[0-9]*x(\\+|-|=| )"     :: String)
+                  e = parse (cs =~ "(\\+|-)* *[0-9]*y(\\+|-|=| )"     :: String)
+                  f = read (cs =~ "(\\+|-)* *[0-9]*([^xy]|\\+|-|=| )" :: String)
+              in Equation a b c d e f
+  where
+      parse str = case takeWhile (`notElem` "xy") str of
+                     "" -> 0
+                     cs -> if not $ any (`elem` ['0'..'9']) $ cs
+                             then if head cs == '+'
+                                    then  1
+                                    else -1
+                             else if head cs == '+'
+                                    then read $ tail cs
+                                    else read        cs
+
+-- Determines what type of equation to solve for, and then calls the appropriate
+-- sove function.
+solve :: Equation -> Solution
+solve e@(LinearEquation{})           = solve_linear            e
+solve e@(SimpleHyperbolicEquation{}) = solve_simple_hyperbolic e
+solve e@(ElipticalEquation{})        = solve_eliptical         e
+solve (Equation a b c d e f)
+    | a == b && b == c && c == 0 = solve_linear
+                                   (LinearEquation d e f)
+    | a == c && c == 0 && b /= 0 = solve_simple_hyperbolic
+                                   (SimpleHyperbolicEquation b d e f)
+    | b^2 - 4 * a * c < 0        = solve_eliptical
+                                   (ElipticalEquation a b c d e f)
+    | b^2 - 4 * a * c == 0       = solve_parabolic
+                                   (ParabolicEquation a b c d e f)
+    | b^2 - 4 * a * c > 0        = error "Not yet implemented"
+    | otherwise = error "Unknow Equation type"
 
 -- -------------------------------------------------------------------------- --
 -- helper functions.
@@ -59,22 +108,6 @@ solution_tolist (SolutionSet ns) = ns
 
 -- -------------------------------------------------------------------------- --
 -- solving functions.
-
-solve :: Equation -> Solution
-solve e@(LinearEquation{})           = solve_linear            e
-solve e@(SimpleHyperbolicEquation{}) = solve_simple_hyperbolic e
-solve e@(ElipticalEquation{})        = solve_eliptical         e
-solve (Equation a b c d e f)
-    | a == b && b == c && c == 0 = solve_linear
-                                   (LinearEquation d e f)
-    | a == c && c == 0 && b /= 0 = solve_simple_hyperbolic
-                                   (SimpleHyperbolicEquation b d e f)
-    | b^2 - 4 * a * c < 0        = solve_eliptical
-                                   (ElipticalEquation a b c d e f)
-    | b^2 - 4 * a * c == 0       = solve_parabolic
-                                   (ParabolicEquation a b c d e f)
-    | b^2 - 4 * a * c > 0        = error "Not yet implemented"
-    | otherwise = error "Unknow Equation type"
 
 -- Solves for Equations in the form of dx + ey + f = 0
 solve_linear :: Equation -> Solution
