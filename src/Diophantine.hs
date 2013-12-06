@@ -1,79 +1,74 @@
--- Joe Jevnik
--- 20.2013
--- Diophantine equation solver.
-module Diophantine
+-- |
+-- Module      : Math.Diophantine
+-- Copyright   : (c) 2009, 2010, 2011, 2012 Bryan O'Sullivan,
+--               (c) 2009 Duncan Coutts,
+--               (c) 2008, 2009 Tom Harper
+--
+-- License     : GPL v2
+-- Maintainer  : joejev@gmail.org
+-- Stability   : experimental
+-- Portability : GHC
+--
+-- A module for solving quadratic diophantine equations.
+
+
+module Math.Diophantine
     ( Equation(..)
     , Solution(..)
-    , parse_eq     -- :: String -> Equation
-    , solve        -- :: Equation -> Solution
+    , solve       -- :: Equation -> Solution
+    , toMaybeList -- :: Solution -> Maybe [(Integer,Integer)]
     ) where
 
 import Control.Arrow ((***))
-import Data.List ((\\),nub)
-import Data.Ratio
-import Text.Regex.TDFA ((=~))
+import Data.List     ((\\),nub)
+import Data.Maybe    (fromMaybe)
+import Data.Ratio    ((%),numerator,denominator)
 
 -- -------------------------------------------------------------------------- --
 -- data types.
 
+-- | An alias for Integer, used to shorten type signatures.
 type Z = Integer
 
--- A way to setup an equation in the form of ax^2 + by^2 + cxy + dx + ey + f = 0
-data Equation = Equation Z Z Z Z Z Z
-              | LinearEquation Z Z Z
-              | SimpleHyperbolicEquation Z Z Z Z
-              | ElipticalEquation Z Z Z Z Z Z
-              | ParabolicEquation Z Z Z Z Z Z
+-- | A way to setup an equation in the form of:
+--
+-- > ax^2 + by^2 + cxy + dx + ey + f = 0
+data Equation = GeneralEquation Z Z Z Z Z Z      -- ^ A general quadratic
+                                                 -- diophantine equation.
+              | LinearEquation Z Z Z             -- ^ dx + ey + f = 0
+              | SimpleHyperbolicEquation Z Z Z Z -- ^ by^2 + dx +ey + f = 0
+              | ElipticalEquation Z Z Z Z Z Z    -- ^ Eliptical equations.
+              | ParabolicEquation Z Z Z Z Z Z    -- ^ Parabolic equations.
                 deriving Show
 
--- The result data, All_Z meaning that all pairs of integers work, NoSolutions
--- means that no element of ZxZ satisfies the equation, and a SolutionSet is an
--- infinite list in the form of (x_n,y_n) where x and y satisfy the equation.
--- A solution set is in no particular order.
-data Solution = All_Z | NoSolutions | SolutionSet [(Z,Z)]
+-- | The results of attempting to solve an 'Equation'.
+data Solution = AllZ                -- ^ All Integer pairs satisfy the equation.
+              | NoSolutions         -- ^ For all (x,y) in ZxZ
+              | SolutionSet [(Z,Z)] -- ^ The set of pairs (x,y) that satisfy the
+                                    -- equation.
 
 instance Show Solution where
-    show All_Z            = "All_Z"
-    show NoSolutions      = "NoSolutions"
+    show  AllZ            = "All Integers"
+    show  NoSolutions     = "No Solutions"
     show (SolutionSet ns) = show ns
 
 -- -------------------------------------------------------------------------- --
 -- exported functions.
 
--- Reads an equation from a string.
-parse_eq :: String -> Equation
-parse_eq cs = let a = parse (cs =~ "(\\+|-)* *[0-9]*x\\^2"            :: String)
-                  b = parse (cs =~ "(\\+|-)* *[0-9]*xy"               :: String)
-                  c = parse (cs =~ "(\\+|-)* *[0-9]*y\\^2"            :: String)
-                  d = parse (cs =~ "(\\+|-)* *[0-9]*x(\\+|-|=| )"     :: String)
-                  e = parse (cs =~ "(\\+|-)* *[0-9]*y(\\+|-|=| )"     :: String)
-                  f = read (cs =~ "(\\+|-)* *[0-9]*([^xy]|\\+|-|=| )" :: String)
-              in Equation a b c d e f
-  where
-      parse str = case takeWhile (`notElem` "xy") str of
-                     "" -> 0
-                     cs -> if not $ any (`elem` ['0'..'9']) $ cs
-                             then if head cs == '+'
-                                    then  1
-                                    else -1
-                             else if head cs == '+'
-                                    then read $ tail cs
-                                    else read        cs
-
--- Determines what type of equation to solve for, and then calls the appropriate
--- sove function.
+-- | Determines what type of equation to solve for, and then calls the
+-- appropriate solve function. Example:
+--
+-- >>> ghci> solve (GeneralEquation 1 2 3 3 5 0)
+-- == [(-3,0),(-2,-1),(0,0),(1,-1)]
 solve :: Equation -> Solution
-solve e@(LinearEquation{})           = solve_linear            e
-solve e@(SimpleHyperbolicEquation{}) = solve_simple_hyperbolic e
-solve e@(ElipticalEquation{})        = solve_eliptical         e
-solve (Equation a b c d e f)
-    | a == b && b == c && c == 0 = solve_linear
+solve (GeneralEquation a b c d e f)
+    | a == b && b == c && c == 0 = solveLinear
                                    (LinearEquation d e f)
-    | a == c && c == 0 && b /= 0 = solve_simple_hyperbolic
+    | a == c && c == 0 && b /= 0 = solveSimpleHyperbolic
                                    (SimpleHyperbolicEquation b d e f)
-    | b^2 - 4 * a * c < 0        = solve_eliptical
+    | b^2 - 4 * a * c < 0        = solveEliptical
                                    (ElipticalEquation a b c d e f)
-    | b^2 - 4 * a * c == 0       = solve_parabolic
+    | b^2 - 4 * a * c == 0       = solveParabolic
                                    (ParabolicEquation a b c d e f)
     | b^2 - 4 * a * c > 0        = error "Not yet implemented"
     | otherwise = error "Unknow Equation type"
@@ -100,22 +95,20 @@ divisors n =
       is_square n = round (sqrt (fromIntegral n)) ^2 == n
 
 -- Extracts the list of solution pairs from a solution.
-solution_tolist :: Solution -> [(Z,Z)]
-solution_tolist All_Z            = (0,0):[ (m,p) | n <- [1..]
-                                         , m <- [n,-n], p <- [n,-n]]
-solution_tolist NoSolutions      = []
-solution_tolist (SolutionSet ns) = ns
+toMaybeList :: Solution -> Maybe [(Z,Z)]
+toMaybeList (SolutionSet ns) = Just ns
+toMaybeList _                = Nothing
 
 -- -------------------------------------------------------------------------- --
 -- solving functions.
 
--- Solves for Equations in the form of dx + ey + f = 0
-solve_linear :: Equation -> Solution
-solve_linear (LinearEquation d e f)
+-- | Solves for Equations in the form of dx + ey + f = 0
+solveLinear :: Equation -> Solution
+solveLinear (LinearEquation d e f)
     | d == 0 && e == 0 = let g     = gcd d e
                              (u,v) = extended_gcd d e
                          in if f == 0
-                              then All_Z
+                              then AllZ
                               else solve' d e f g u v
     | d == 0 && e /= 0 = let g     = gcd d e
                              (u,v) = extended_gcd d e
@@ -139,11 +132,11 @@ solve_linear (LinearEquation d e f)
                                        , let b' = (-d) * (-t) - f * v
                                        , s <- nub [(x,y),(x',y'),(a,b),(a',b')]
                                        ]
-solve_linear _ = error "solve_linear requires a LinearEquation"
+solveLinear _ = error "solveLinear requires a LinearEquation"
 
--- Solves for Equations in the form of bxy + dx + ey + f = 0
-solve_simple_hyperbolic :: Equation -> Solution
-solve_simple_hyperbolic (SimpleHyperbolicEquation b d e f)
+-- | Solves for Equations in the form of bxy + dx + ey + f = 0
+solveSimpleHyperbolic :: Equation -> Solution
+solveSimpleHyperbolic (SimpleHyperbolicEquation b d e f)
     | b == 0 = error "Does not match SimpleHyperbolicEquation form"
     | d * e - b * f == 0 && e `mod` b == 0
         = SolutionSet [e | y <- [0..], e <- nub [ ((-e) `div` b,y)
@@ -157,13 +150,13 @@ solve_simple_hyperbolic (SimpleHyperbolicEquation b d e f)
                 $ map (\d_i -> ( (d_i - e) % b
                                , ((d * e - b * f) `div` d_i - d) % b))
                 $ divisors (d * e - b * f) >>= \n -> [n,-n]
-solve_simple_hyperbolic _ =
-    error "solve_simple_hyperbolic requires a SimpleHyperbolicEquation"
+solveSimpleHyperbolic _ =
+    error "solveSimpleHyperbolic requires a SimpleHyperbolicEquation"
 
--- Solves for Equations in the form of ax^2 + bx^y + cy^2 + dx + ey + f = 0
+-- | Solves for Equations in the form of ax^2 + bx^y + cy^2 + dx + ey + f = 0
 -- when b^2 - 4ac < 0
-solve_eliptical :: Equation -> Solution
-solve_eliptical (ElipticalEquation a b c d e f) =
+solveEliptical :: Equation -> Solution
+solveEliptical (ElipticalEquation a b c d e f) =
     if (2 * b * e - 4 * c * d)^2 - 4 * (b^2 - 4 * a * c) * (e^2 - 4 * c * f) > 0
       then let a' = fromIntegral a :: Double
                b' = fromIntegral b :: Double
@@ -198,12 +191,12 @@ solve_eliptical (ElipticalEquation a b c d e f) =
                     then NoSolutions
                     else SolutionSet cs
       else NoSolutions
-solve_eliptical _ = error "solve_eliptical requires ElipticalEquation"
+solveEliptical _ = error "solveEliptical requires ElipticalEquation"
 
--- Solves for Equations in the form of ax^2 + bx^y + cy^2 + dx + ey + f = 0
+-- | Solves for Equations in the form of ax^2 + bx^y + cy^2 + dx + ey + f = 0
 -- when b^2 - 4ac = 0
-solve_parabolic :: Equation -> Solution
-solve_parabolic (ParabolicEquation a b c d e f) =
+solveParabolic :: Equation -> Solution
+solveParabolic (ParabolicEquation a b c d e f) =
     let g  = if a >= 0
                then abs $ gcd a c
                else - (abs $ gcd a c)
@@ -220,10 +213,10 @@ solve_parabolic (ParabolicEquation a b c d e f) =
                   u_2 = ((-d) - round (sqrt (fromIntegral (d^2 - 4 * a' * g))))
                         `div` (2 * ra)
               in SolutionSet $ concat $ zipWith (\a b -> [a,b])
-                     (solution_tolist
-                      (solve_linear (LinearEquation ra rc (-u_1))))
-                     (solution_tolist
-                      (solve_linear (LinearEquation ra rc (-u_2))))
+                     (fromMaybe [] $
+                      toMaybeList (solveLinear (LinearEquation ra rc (-u_1))))
+                     (fromMaybe [] $
+                      toMaybeList (solveLinear (LinearEquation ra rc (-u_2))))
          else let us = [u | u <- [0..abs (rc * d - ra * e) - 1]
                        , (ra * g * u^2 + d * u + ra * f)
                         `mod` (rc * d - ra * e) == 0]
