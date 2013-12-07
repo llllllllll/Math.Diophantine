@@ -4,7 +4,7 @@
 --
 -- License     : GPL v2
 -- Maintainer  : joejev@gmail.org
--- Stability   : experimental
+-- Stability   : stable
 -- Portability : GHC
 --
 -- A module for solving quadratic diophantine equations.
@@ -13,6 +13,7 @@
 module Math.Diophantine
     ( Equation(..)          -- instance of: Show
     , Solution(..)          -- instance of: Eq, Show
+    , Z
     , specializeEquation    -- :: Equation -> Equation
     , solve                 -- :: Equation -> Solution
     , solveLinear           -- :: Equation -> Solution
@@ -30,7 +31,7 @@ import Data.Ratio    ((%),numerator,denominator)
 -- -------------------------------------------------------------------------- --
 -- data types.
 
--- | An alias for Integer, used to shorten type signatures.
+-- | An alias for 'Integer', used to shorten type signatures.
 type Z = Integer
 
 -- | A way to setup an equation in the form of:
@@ -42,7 +43,7 @@ data Equation = GeneralEquation Z Z Z Z Z Z      -- ^ A general quadratic
               | SimpleHyperbolicEquation Z Z Z Z -- ^ bxy + dx +ey + f = 0
               | ElipticalEquation Z Z Z Z Z Z    -- ^ Eliptical equations.
               | ParabolicEquation Z Z Z Z Z Z    -- ^ Parabolic equations.
-              | HyperbolicEquation Z Z Z Z Z Z   -- ^ Hyperbolic equations.
+              | HyperbolicEquation Z Z Z Z       -- ^ Hyperbolic equations.
                 deriving Show
 
 -- | The results of attempting to solve an 'Equation'.
@@ -58,34 +59,21 @@ instance Show Solution where
     show (SolutionSet ns) = show ns
 
 -- -------------------------------------------------------------------------- --
--- exported functions.
+-- added exported functions.
 
--- | Determines what type of equation to solve for, and then calls the
--- appropriate solve function. Example:
---
--- >>> ghci> solve (GeneralEquation 1 2 3 3 5 0)
--- == [(-3,0),(-2,-1),(0,0),(1,-1)]
-solve :: Equation -> Solution
-solve e = case specializeEquation e of
-              e@(LinearEquation{})           -> solveLinear           e
-              e@(SimpleHyperbolicEquation{}) -> solveSimpleHyperbolic e
-              e@(ElipticalEquation{})        -> solveEliptical        e
-              e@(ParabolicEquation{})        -> solveParabolic        e
-              e@(HyperbolicEquation{})       -> error "not yet implemented"
-
--- | Detirmines what kind of equation form a GeneralEquation fits.
--- If you pass a non GeneralEquation to this function, it is the same as id.
+-- | Detirmines what kind of equation form a 'GeneralEquation' fits.
+-- If you pass a non 'GeneralEquation' to this function, it is the same as id.
 specializeEquation :: Equation -> Equation
 specializeEquation (GeneralEquation a b c d e f)
-    | a == b && b == c && c == 0 = LinearEquation d e f
-    | a == c && c == 0 && b /= 0 = SimpleHyperbolicEquation b d e f
-    | b^2 - 4 * a * c < 0        = ElipticalEquation a b c d e f
-    | b^2 - 4 * a * c == 0       = ParabolicEquation a b c d e f
-    | b^2 - 4 * a * c > 0        = HyperbolicEquation a b c d e f
+    | a == b && b == c && c == 0              = LinearEquation d e f
+    | a == c && c == 0 && b /= 0              = SimpleHyperbolicEquation b d e f
+    | b^2 - 4 * a * c < 0                     = ElipticalEquation a b c d e f
+    | b^2 - 4 * a * c == 0                    = ParabolicEquation a b c d e f
+    | d == 0 && e == 0 && b^2 - 4 * a * c > 0 = HyperbolicEquation a b c f
     | otherwise                  = error "Invalid equation type"
 specializeEquation e = e
 
--- | Extracts the list of solution pairs from a solution.
+-- | Extracts the list of solution pairs from a 'Solution'.
 toMaybeList :: Solution -> Maybe [(Z,Z)]
 toMaybeList (SolutionSet ns) = Just ns
 toMaybeList _                = Nothing
@@ -105,16 +93,47 @@ extendedGCD a b = extendedGCD' 0 1 b 1 0 a
 -- | Returns a list of the divisors of n.
 divisors :: Integral a => a -> [a]
 divisors n =
-    n:1:(concat [[x,n `div` x] | x <- [2..floor $ sqrt $ fromIntegral n]
+    n:1:(concat [[x,n `div` x] | x <- [2..intSqrt n]
                 , n `rem` x == 0]
-         \\ [floor $ sqrt $ fromIntegral n | isSquare n])
-  where
-      isSquare n = round (sqrt (fromIntegral n)) ^2 == n
+         \\ [intSqrt n | isSquare n])
+
+-- | Returns True iff n is a perfect square.
+isSquare :: Integral a => a -> Bool
+isSquare n = (intSqrt n)^2 == n
+
+-- | Merges two 'Solution's into one.
+mergeSolutions :: Solution -> Solution -> Solution
+mergeSolutions (SolutionSet ss) (SolutionSet ts) =
+    SolutionSet $ concat $ zipWith (\a b -> [a,b]) ss ts
+mergeSolutions NoSolutions s@(SolutionSet _) = s
+mergeSolutions s@(SolutionSet _) NoSolutions = s
+mergeSolutions NoSolutions NoSolutions       = NoSolutions
+mergeSolutions NoSolutions ZxZ               = ZxZ
+mergeSolutions ZxZ NoSolutions               = ZxZ
+mergeSolutions ZxZ ZxZ                       = ZxZ
+
+-- | Preforms square roots on perfect squares.
+-- WARNING: Assumes the argument is a perfect square and does not check.
+intSqrt :: Integral a => a -> a
+intSqrt = round . sqrt . fromIntegral
 
 -- -------------------------------------------------------------------------- --
 -- exported solving functions.
 
--- | Solves for Equations in the form of dx + ey + f = 0
+-- | Determines what type of equation to solve for, and then calls the
+-- appropriate solve function. Example:
+--
+-- >>> ghci> solve (GeneralEquation 1 2 3 3 5 0)
+-- [(-3,0),(-2,-1),(0,0),(1,-1)]
+solve :: Equation -> Solution
+solve e = case specializeEquation e of
+              e@(LinearEquation{})           -> solveLinear           e
+              e@(SimpleHyperbolicEquation{}) -> solveSimpleHyperbolic e
+              e@(ElipticalEquation{})        -> solveEliptical        e
+              e@(ParabolicEquation{})        -> solveParabolic        e
+              e@(HyperbolicEquation{})       -> solveHyperbolic       e
+
+-- | Solves for 'Equation's in the form of dx + ey + f = 0
 solveLinear :: Equation -> Solution
 solveLinear (LinearEquation d e f)
     | d == 0 && e == 0 = let g     = gcd d e
@@ -149,7 +168,7 @@ solveLinear e =
         e'@(LinearEquation{}) -> solveLinear e'
         _ -> error "solveLinear requires a linear equation"
 
--- | Solves for Equations in the form of bxy + dx + ey + f = 0
+-- | Solves for 'Equation's in the form of bxy + dx + ey + f = 0
 solveSimpleHyperbolic :: Equation -> Solution
 solveSimpleHyperbolic (SimpleHyperbolicEquation b d e f)
     | b == 0 = error "Does not match SimpleHyperbolicEquation form"
@@ -170,7 +189,7 @@ solveSimpleHyperbolic e =
         e'@(SimpleHyperbolicEquation{}) -> solveSimpleHyperbolic e'
         _ -> error "solveSimpleHyperbolic requires a simple hyperbolic equation"
 
--- | Solves for Equations in the form of ax^2 + bxy + cy^2 + dx + ey + f = 0
+-- | Solves for 'Equation's in the form of ax^2 + bxy + cy^2 + dx + ey + f = 0
 -- when b^2 - 4ac < 0
 solveEliptical :: Equation -> Solution
 solveEliptical (ElipticalEquation a b c d e f) =
@@ -190,16 +209,12 @@ solveEliptical (ElipticalEquation a b c d e f) =
                l  = ceiling $ min b1 b2
                u  = floor $ max b1 b2
                cs = [ v | x <- [l..u]
-                    , let y'  =  (-(b * x + e) + round
-                                  (sqrt (fromIntegral
-                                         ((b * x + e)^2
-                                          - 4 * c * (a * x^2 + d * x + f)))))
-                                 % (2 * c)
-                    , let y'' = (-(b * x + e) - round
-                                 (sqrt (fromIntegral
-                                        ((b * x + e)^2
-                                         - 4 * c * (a * x^2 + d * x + f)))))
-                                % (2 * c)
+                    , let y'  =  (-(b * x + e) + intSqrt
+                                       ((b * x + e)^2 - 4 * c
+                                        * (a * x^2 + d * x + f))) % (2 * c)
+                    , let y'' = (-(b * x + e) - intSqrt
+                                        ((b * x + e)^2 - 4 * c
+                                         * (a * x^2 + d * x + f))) % (2 * c)
                     , v' <- [(x,y'),(x,y'')]
                     , let v = (fst v',numerator $ snd v')
                     , denominator (snd v') == 1
@@ -213,7 +228,7 @@ solveEliptical e =
         e'@(ElipticalEquation{}) -> solveEliptical e'
         _ -> error "solveEliptical requires an eliptical equation"
 
--- | Solves for Equations in the form of ax^2 + bxy + cy^2  + dx + ey + f = 0
+-- | Solves for 'Equation's in the form of ax^2 + bxy + cy^2  + dx + ey + f = 0
 -- when b^2 - 4ac = 0
 solveParabolic :: Equation -> Solution
 solveParabolic (ParabolicEquation a b c d e f) =
@@ -223,20 +238,17 @@ solveParabolic (ParabolicEquation a b c d e f) =
         a' = abs $ a `div` g
         b' =  b `div` g
         c' = abs $ c `div` g
-        ra = (round . sqrt . fromIntegral) a'
+        ra = intSqrt a'
         rc = if b `div` a >= 0
-               then abs $ (round . sqrt . fromIntegral) c'
-               else - (abs $ (round . sqrt . fromIntegral) c')
+               then abs $ intSqrt c'
+               else - (abs $ intSqrt c')
     in if rc * d - ra * e == 0
-         then let u_1 = ((-d) + round (sqrt (fromIntegral (d^2 - 4 * a' * g))))
+         then let u_1 = ((-d) + intSqrt (d^2 - 4 * a' * g))
                         `div` (2 * ra)
-                  u_2 = ((-d) - round (sqrt (fromIntegral (d^2 - 4 * a' * g))))
+                  u_2 = ((-d) - intSqrt (d^2 - 4 * a' * g))
                         `div` (2 * ra)
-              in SolutionSet $ concat $ zipWith (\a b -> [a,b])
-                     (fromMaybe [] $
-                      toMaybeList (solveLinear (LinearEquation ra rc (-u_1))))
-                     (fromMaybe [] $
-                      toMaybeList (solveLinear (LinearEquation ra rc (-u_2))))
+              in mergeSolutions (solveLinear (LinearEquation ra rc (-u_1)))
+                     (solveLinear (LinearEquation ra rc (-u_2)))
          else let us = [u | u <- [0..abs (rc * d - ra * e) - 1]
                        , (ra * g * u^2 + d * u + ra * f)
                         `mod` (rc * d - ra * e) == 0]
@@ -264,3 +276,37 @@ solveParabolic e =
     case specializeEquation e of
         e'@(ParabolicEquation{}) -> solveParabolic e'
         _ -> error "solveParabolic requires a parabolic equation."
+
+-- | Solves for 'Equation's in the form of ax^2 + bxy + cy^2 + f = 0
+-- when b^2 - 4ac > 0
+solveHyperbolic :: Equation -> Solution
+solveHyperbolic (HyperbolicEquation a b c f)
+    | f == 0
+        = if isSquare $ b^2 - 4 * a * c
+            then mergeSolutions
+                     (solveLinear (LinearEquation (2 * a)
+                                   (intSqrt $ b^2 - 4 * a * c) 0))
+                     (solveLinear (LinearEquation (2 * a)
+                                   (intSqrt $ b^2 - 4 * a * c) 0))
+                 else SolutionSet [(0,0)]
+    | f /= 0 && isSquare (b^2 - 4 * a * c)
+        = let us = concat $ zipWith (\a b -> [a,b])
+                   (divisors $ (-4) * a * f)
+                   (map (0-) $ divisors $ (-4) * a * f)
+              k  = intSqrt $ b^2 - 4 * a * c
+              ys = [ (y,u) | u <- us
+                   , let yn = (4 * a * f) % u
+                   , let y' = (u + (numerator yn)) % (2 * k)
+                   , let y  = numerator y'
+                   , denominator yn == 1
+                   , denominator y' == 1
+                   ]
+          in SolutionSet [ (x,y) | (y,u) <- ys
+                         , let x' = (u - (b + k) * y) % (2 * a)
+                         , let x  = numerator x'
+                         , denominator x' == 1
+                         ]
+        | f /= 0 && not (f `rem` (foldl1 gcd [a,b,c]) == 0)
+            = if 4 * f^2 < b^2 - 4 * a * c
+                then NoSolutions
+                else error "not yet implemented"
