@@ -24,7 +24,7 @@ module Math.Diophantine
     ) where
 
 import Control.Arrow ((***))
-import Data.List     ((\\),nub)
+import Data.List     ((\\))
 import Data.Maybe    (fromMaybe)
 import Data.Ratio    ((%),numerator,denominator)
 
@@ -161,7 +161,7 @@ solveLinear (LinearEquation d e f)
                                        , let y' = (-d) *   t  - f * v
                                        , let b  = (-d) * (-t) + f * v
                                        , let b' = (-d) * (-t) - f * v
-                                       , s <- nub [(x,y),(x',y'),(a,b),(a',b')]
+                                       , s <- [(x,y),(x',y'),(a,b),(a',b')]
                                        ]
 solveLinear e =
     case specializeEquation e of
@@ -173,11 +173,11 @@ solveSimpleHyperbolic :: Equation -> Solution
 solveSimpleHyperbolic (SimpleHyperbolicEquation b d e f)
     | b == 0 = error "Does not match SimpleHyperbolicEquation form"
     | d * e - b * f == 0 && e `mod` b == 0
-        = SolutionSet [e | y <- [0..], e <- nub [ ((-e) `div` b,y)
-                                                , ((-e) `div` b,-y)]]
+        = SolutionSet [e | y <- [0..], e <- [ ((-e) `div` b,y)
+                                            , ((-e) `div` b,-y)]]
     | d * e - b * f == 0 && d `mod` b == 0
-        = SolutionSet [e | x <- [0..], e <- nub [ (x,(-d) `div` b)
-                                                , (-x,(-d) `div` b)]]
+        = SolutionSet [e | x <- [0..], e <- [ (x,(-d) `div` b)
+                                            , (-x,(-d) `div` b)]]
     | d * e - b * f /= 0
         = SolutionSet $ map (numerator *** numerator)
           $ filter (\(r1,r2) -> denominator r1 == 1 && denominator r2 == 1)
@@ -252,7 +252,7 @@ solveParabolic (ParabolicEquation a b c d e f) =
          else let us = [u | u <- [0..abs (rc * d - ra * e) - 1]
                        , (ra * g * u^2 + d * u + ra * f)
                         `mod` (rc * d - ra * e) == 0]
-              in SolutionSet $ nub
+              in SolutionSet
                      [ v | t <- [0..], u <- us
                      , let x1 = rc * g * (ra * e - rc * d) * t^2
                                 - (e + 2 * rc * g * u) * t
