@@ -244,19 +244,15 @@ solveParabolic (ParabolicEquation a b c d e f) =
                then abs $ gcd a c
                else - (abs $ gcd a c)
         a' = abs $ a `div` g
-        b' =  b `div` g
+        b' = b `div` g
         c' = abs $ c `div` g
         ra = intSqrt a'
         rc = if b `div` a >= 0
-               then abs $ intSqrt c'
-               else - (abs $ intSqrt c')
+               then intSqrt c'
+               else - (intSqrt c')
     in if rc * d - ra * e == 0
-         then let u_1 = ((-d) + intSqrt (d^2 - 4 * a' * g))
-                        `div` (2 * ra)
-                  u_2 = ((-d) - intSqrt (d^2 - 4 * a' * g))
-                        `div` (2 * ra)
-              in mergeSolutions (solveLinear (LinearEquation ra rc (-u_1)))
-                     (solveLinear (LinearEquation ra rc (-u_2)))
+         then solve $
+              GeneralEquation (a^2 * g^2) 0 (a * c * g^2) (d * ra) rc (ra * f)
          else let us = [u | u <- [0..abs (rc * d - ra * e) - 1]
                        , (ra * g * u^2 + d * u + ra * f)
                         `mod` (rc * d - ra * e) == 0]
@@ -272,7 +268,7 @@ solveParabolic (ParabolicEquation a b c d e f) =
                                    `div` (rc * d - ra * e))
                      , let y1 = ra * g * (rc * d - ra * e) * t^2
                                 + (d + 2 * ra * g * u) * t
-                                + ((ra * g * u^2 + d * u + ra * f)
+                                      + ((ra * g * u^2 + d * u + ra * f)
                                    `div` (rc * d - ra * e))
                      , let y2 = ra * g * (rc * d - ra * e) * t^2
                                 + (d + 2 * ra * g * u) * (-t)
