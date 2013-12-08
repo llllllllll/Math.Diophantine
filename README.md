@@ -32,15 +32,17 @@ import the library with:
 
     import module Math.Diophantine
 		( Equation(..)          -- instance of: Show
-		, Solution(..)          -- instance of: Eq, Show
+        , Solution(..)          -- instance of: Eq, Show
+        , Z
         , specializeEquation    -- :: Equation -> Equation
+        , toMaybeList           -- :: Solution -> Maybe [(Integer,Integer)]
+        , mergeSolutions        -- :: Solution -> Solution -> Solution
         , solve                 -- :: Equation -> Solution
         , solveLinear           -- :: Equation -> Solution
         , solveSimpleHyperbolic -- :: Equation -> Solution
         , solveEliptical        -- :: Equation -> Solution
         , solveParabolic        -- :: Equation -> Solution
-        , toMaybeList           -- :: Solution -> Maybe [(Integer,Integer)]
-    )
+        )
 
 The most import function of this library is `solve :: Equation -> Solution`.
 The types of equations that this library can solve are defined by the different
