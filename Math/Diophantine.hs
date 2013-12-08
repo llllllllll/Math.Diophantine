@@ -1,8 +1,8 @@
 -- |
 -- Module      : Math.Diophantine
--- Copyright   : 2013 Joe Jevnik
+-- Copyright   : Joe Jevnik 2013
 --
--- License     : GPL v2
+-- License     : GPL-2
 -- Maintainer  : joejev@gmail.org
 -- Stability   : stable
 -- Portability : GHC
@@ -11,16 +11,22 @@
 
 
 module Math.Diophantine
-    ( Equation(..)          -- instance of: Show
+    (
+    -- * Data
+      Equation(..)          -- instance of: Show
     , Solution(..)          -- instance of: Eq, Show
     , Z
+    -- * Utilities
     , specializeEquation    -- :: Equation -> Equation
+    , toMaybeList           -- :: Solution -> Maybe [(Integer,Integer)]
+    , mergeSolutions        -- :: Solution -> Solution -> Solution
+    -- * Equation Solving
     , solve                 -- :: Equation -> Solution
     , solveLinear           -- :: Equation -> Solution
     , solveSimpleHyperbolic -- :: Equation -> Solution
     , solveEliptical        -- :: Equation -> Solution
     , solveParabolic        -- :: Equation -> Solution
-    , toMaybeList           -- :: Solution -> Maybe [(Integer,Integer)]
+ -- , solveHyperbolic       -- :: Equation -> Solution
     ) where
 
 import Control.Arrow ((***))
@@ -43,14 +49,15 @@ data Equation = GeneralEquation Z Z Z Z Z Z      -- ^ A general quadratic
               | SimpleHyperbolicEquation Z Z Z Z -- ^ bxy + dx +ey + f = 0
               | ElipticalEquation Z Z Z Z Z Z    -- ^ Eliptical equations.
               | ParabolicEquation Z Z Z Z Z Z    -- ^ Parabolic equations.
-              | HyperbolicEquation Z Z Z Z       -- ^ Hyperbolic equations.
+              | HyperbolicEquation Z Z Z Z Z Z   -- ^ Hyperbolic equations.
                 deriving Show
 
 -- | The results of attempting to solve an 'Equation'.
 data Solution = ZxZ                 -- ^ All Integer pairs satisfy the equation.
               | NoSolutions         -- ^ For all (x,y) in ZxZ
               | SolutionSet [(Z,Z)] -- ^ The set of pairs (x,y) that satisfy the
-                                    -- equation.
+                                    -- equation. These are not in any particular
+                                    -- order, and may contain duplicates.
                 deriving Eq
 
 instance Show Solution where
@@ -65,18 +72,29 @@ instance Show Solution where
 -- If you pass a non 'GeneralEquation' to this function, it is the same as id.
 specializeEquation :: Equation -> Equation
 specializeEquation (GeneralEquation a b c d e f)
-    | a == b && b == c && c == 0              = LinearEquation d e f
-    | a == c && c == 0 && b /= 0              = SimpleHyperbolicEquation b d e f
-    | b^2 - 4 * a * c < 0                     = ElipticalEquation a b c d e f
-    | b^2 - 4 * a * c == 0                    = ParabolicEquation a b c d e f
-    | d == 0 && e == 0 && b^2 - 4 * a * c > 0 = HyperbolicEquation a b c f
+    | a == b && b == c && c == 0 = LinearEquation d e f
+    | a == c && c == 0 && b /= 0 = SimpleHyperbolicEquation b d e f
+    | b^2 - 4 * a * c < 0        = ElipticalEquation a b c d e f
+    | b^2 - 4 * a * c == 0       = ParabolicEquation a b c d e f
+    | b^2 - 4 * a * c > 0        = HyperbolicEquation a b c d e f
     | otherwise                  = error "Invalid equation type"
-specializeEquation e = e
+specializeEquation e             = e
 
 -- | Extracts the list of solution pairs from a 'Solution'.
 toMaybeList :: Solution -> Maybe [(Z,Z)]
 toMaybeList (SolutionSet ns) = Just ns
 toMaybeList _                = Nothing
+
+-- | Merges two 'Solution's into one.
+mergeSolutions :: Solution -> Solution -> Solution
+mergeSolutions (SolutionSet ss) (SolutionSet ts) =
+    SolutionSet $ concat $ zipWith (\a b -> [a,b]) ss ts
+mergeSolutions NoSolutions s@(SolutionSet _) = s
+mergeSolutions s@(SolutionSet _) NoSolutions = s
+mergeSolutions NoSolutions NoSolutions       = NoSolutions
+mergeSolutions NoSolutions ZxZ               = ZxZ
+mergeSolutions ZxZ NoSolutions               = ZxZ
+mergeSolutions ZxZ ZxZ                       = ZxZ
 
 -- -------------------------------------------------------------------------- --
 -- helper functions.
@@ -101,16 +119,6 @@ divisors n =
 isSquare :: Integral a => a -> Bool
 isSquare n = (intSqrt n)^2 == n
 
--- | Merges two 'Solution's into one.
-mergeSolutions :: Solution -> Solution -> Solution
-mergeSolutions (SolutionSet ss) (SolutionSet ts) =
-    SolutionSet $ concat $ zipWith (\a b -> [a,b]) ss ts
-mergeSolutions NoSolutions s@(SolutionSet _) = s
-mergeSolutions s@(SolutionSet _) NoSolutions = s
-mergeSolutions NoSolutions NoSolutions       = NoSolutions
-mergeSolutions NoSolutions ZxZ               = ZxZ
-mergeSolutions ZxZ NoSolutions               = ZxZ
-mergeSolutions ZxZ ZxZ                       = ZxZ
 
 -- | Preforms square roots on perfect squares.
 -- WARNING: Assumes the argument is a perfect square and does not check.
@@ -131,7 +139,7 @@ solve e = case specializeEquation e of
               e@(SimpleHyperbolicEquation{}) -> solveSimpleHyperbolic e
               e@(ElipticalEquation{})        -> solveEliptical        e
               e@(ParabolicEquation{})        -> solveParabolic        e
-              e@(HyperbolicEquation{})       -> solveHyperbolic       e
+              e@(HyperbolicEquation{})       -> error "not yet implemented"
 
 -- | Solves for 'Equation's in the form of dx + ey + f = 0
 solveLinear :: Equation -> Solution
@@ -277,11 +285,12 @@ solveParabolic e =
         e'@(ParabolicEquation{}) -> solveParabolic e'
         _ -> error "solveParabolic requires a parabolic equation."
 
+-- TODO:
 -- | Solves for 'Equation's in the form of ax^2 + bxy + cy^2 + f = 0
 -- when b^2 - 4ac > 0
 solveHyperbolic :: Equation -> Solution
-solveHyperbolic (HyperbolicEquation a b c f)
-    | f == 0
+solveHyperbolic (HyperbolicEquation a b c d e f)
+    | d == e && e == f && f == 0
         = if isSquare $ b^2 - 4 * a * c
             then mergeSolutions
                      (solveLinear (LinearEquation (2 * a)
@@ -289,7 +298,7 @@ solveHyperbolic (HyperbolicEquation a b c f)
                      (solveLinear (LinearEquation (2 * a)
                                    (intSqrt $ b^2 - 4 * a * c) 0))
                  else SolutionSet [(0,0)]
-    | f /= 0 && isSquare (b^2 - 4 * a * c)
+    | d == e && e == 0 && f /= 0 && isSquare (b^2 - 4 * a * c)
         = let us = concat $ zipWith (\a b -> [a,b])
                    (divisors $ (-4) * a * f)
                    (map (0-) $ divisors $ (-4) * a * f)
@@ -306,7 +315,7 @@ solveHyperbolic (HyperbolicEquation a b c f)
                          , let x  = numerator x'
                          , denominator x' == 1
                          ]
-        | f /= 0 && not (f `rem` (foldl1 gcd [a,b,c]) == 0)
+        | d == e && e == 0 && f /= 0 && not (f `rem` (foldl1 gcd [a,b,c]) == 0)
             = if 4 * f^2 < b^2 - 4 * a * c
                 then NoSolutions
                 else error "not yet implemented"
