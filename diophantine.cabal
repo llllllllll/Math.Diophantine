@@ -15,6 +15,8 @@ description:
     This library breaks down equations based on their type to solve them most
     efficiently. This library supports linear, simple hyperbolic, eliptical, and
     parabolic equations, with hyperbolics on the way.
+    .
+    Please send feedback or bugs to joejev@gmail.com.
 
 homepage:            https://github.com/llllllllll/Math.Diophantine
 license:             GPL-2
