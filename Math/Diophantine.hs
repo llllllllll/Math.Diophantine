@@ -17,6 +17,7 @@ module Math.Diophantine
     , Z
     , SolveError(..)            -- Instances: Show
     -- * Utilities
+    , readEquation              -- :: String -> Equation
     , specializeEquation        -- :: Equation -> Equation
     , toMaybeList               -- :: Solution -> Maybe [(Integer,Integer)]
     , mergeSolutions            -- :: Solution -> Solution -> Solution
@@ -25,23 +26,22 @@ module Math.Diophantine
     ) where
 
 import Math.Diophantine.Internal
+import Math.Diophantine.Parser
 
 -- -------------------------------------------------------------------------- --
--- data types.
+-- Data types.
 
 -- | A way to report an error in solving.
 data SolveError = SolveError String deriving Show
 
 -- -------------------------------------------------------------------------- --
--- added exported functions.
+-- Exported functions.
 
 -- | Extracts the list of solution pairs from a 'Solution'.
 toMaybeList :: Solution -> Maybe [(Z,Z)]
 toMaybeList (SolutionSet ns) = Just ns
 toMaybeList _                = Nothing
 
--- -------------------------------------------------------------------------- --
--- exported solving functions.
 
 -- | Determines what type of equation to solve for, and then calls the
 -- appropriate solve function. Example:

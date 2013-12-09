@@ -46,7 +46,7 @@ data Solution = ZxZ                 -- ^ All Integer pairs satisfy the equation.
                 deriving Eq
 
 instance Show Solution where
-    show  ZxZ             = "All Integers"
+    show  ZxZ             = "{(x,y) | x <- Z, y <- Z}"
     show  NoSolutions     = "No Solutions"
     show (SolutionSet ns) = show ns
 
@@ -65,21 +65,32 @@ data Equation = GeneralEquation Z Z Z Z Z Z      -- ^ A general quadratic
               | HyperbolicEquation Z Z Z Z Z Z   -- ^ Hyperbolic equations.
 
 instance Show Equation where
+    show (LinearEquation 0 0 0) = "0 = 0"
     show (LinearEquation d e f)
-        = show d ++ "x + " ++ show e ++ "y + " ++ show f ++ " = 0"
+        = cShow d "x" ++ cShow e " + y" ++ fShow f
     show (SimpleHyperbolicEquation b d e f)
-        = show b ++ "xy + " ++ show d ++ "x + " ++ show e ++ "y + "
-          ++ show f ++ " = 0"
+        = cShow b "xy" ++ cShow d " + x" ++ cShow e " + y" ++ fShow f
     show (ElipticalEquation a b c d e f)
-        = show a ++ "x^2 + " ++ show b ++ "xy + " ++ show c ++ "y^2 + "
-          ++ show d ++ "x + " ++ show e ++ "y + " ++ show f ++ " = 0"
+        = cShow a "x^2" ++ cShow b " + xy" ++ cShow c " + y^2"
+          ++ cShow d " + x" ++ cShow e " + y" ++ fShow f
     show (ParabolicEquation a b c d e f)
-        = show a ++ "x^2 + " ++ show b ++ "xy + " ++ show c ++ "y^2 + "
-          ++ show d ++ "x + " ++ show e ++ "y + " ++ show f ++ " = 0"
+        = cShow a "x^2" ++ cShow b " + xy" ++ cShow c " + y^2"
+          ++ cShow d " + x" ++ cShow e " + y" ++ fShow f
     show (HyperbolicEquation a b c d e f)
-        = show a ++ "x^2 + " ++ show b ++ "xy + " ++ show c ++ "y^2 + "
-          ++ show d ++ "x + " ++ show e ++ "y + " ++ show f ++ " = 0"
+        = cShow a "x^2" ++ cShow b " + xy" ++ cShow c " + y^2"
+          ++ cShow d " + x" ++ cShow e " + y" ++ fShow f
     show e@(GeneralEquation{}) = show $ specializeEquation e
+
+-- | Helper function for Show Equation to help show coefficients.
+cShow :: Z -> String -> String
+cShow 0 _ = ""
+cShow 1 v = v
+cShow n v = let (h,t) = span (`notElem` "xy") v
+            in h ++ show n ++ t
+
+fShow :: Z -> String
+fShow 0 = " = 0"
+fShow n = " + " ++ show n ++ " = 0"
 
 -- -------------------------------------------------------------------------- --
 -- Helper functions.
