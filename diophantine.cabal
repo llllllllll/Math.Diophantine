@@ -33,6 +33,6 @@ source-repository head
   location: https://github.com/llllllllll/Math.Diophantine.git
 
 library
-  exposed-modules:     Math.Diophantine
+  exposed-modules:     Math.Diophantine, Math.Diophantine.Internal
   build-depends:       base ==4.6.*
   hs-source-dirs:      .
