@@ -12,10 +12,10 @@
 module Math.Diophantine
     (
     -- * Data
-      Equation(GeneralEquation) -- instance of: Show
-    , Solution(..)              -- instance of: Eq, Show
+      Equation(GeneralEquation) -- instances: Show
+    , Solution(..)              -- instances: Eq, Show
     , Z
-    , SolveError                -- Instance of: Show
+    , SolveError(..)            -- Instances: Show
     -- * Utilities
     , specializeEquation        -- :: Equation -> Equation
     , toMaybeList               -- :: Solution -> Maybe [(Integer,Integer)]

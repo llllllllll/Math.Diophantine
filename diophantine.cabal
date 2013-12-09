@@ -1,5 +1,5 @@
 name:                diophantine
-version:             0.1.0.0
+version:             0.2.0.0
 synopsis:            A quadratic diophantine equation solving library.
 description:
     A library for solving quadratic diophantine equations.
@@ -16,13 +16,12 @@ description:
     efficiently. This library supports linear, simple hyperbolic, eliptical, and
     parabolic equations, with hyperbolics on the way.
     .
-    Please send feedback or bugs to joejev@gmail.com.
-
+    Please send feedback or bugs to joejev\@gmail.com.
 homepage:            https://github.com/llllllllll/Math.Diophantine
 license:             GPL-2
 license-file:        LICENSE
 author:              Joe Jevnik
-maintainer:          joejev@gmail.com
+maintainer:          Joe Jevnik <joejev@gmail.com>
 copyright:           Joe Jevnik 2013
 category:            Math
 build-type:          Simple

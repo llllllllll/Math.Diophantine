@@ -7,17 +7,17 @@
 -- Stability   : stable
 -- Portability : GHC
 --
--- UNSAFE: The internal workings of solve. These functions use error, and should
--- only be called directly if you know the type of the equation ahead of time.
--- For example, solveLinear will try to resolve a GeneralEquation into a linear
--- one if possible, but if you pass a GeneralEquation of a parabolic form, then
--- it will error.
+-- WARNING: The internal workings of solve. These functions use error, and
+-- should only be called directly if you know the type of the equation ahead of
+-- time. For example, solveLinear will try to resolve a GeneralEquation into a
+-- linear one if possible, but if you pass a GeneralEquation of a parabolic
+-- form, then it will error.
 
 module Math.Diophantine.Internal
     (
     -- * Data
-      Equation(..)          -- Instance of: Show
-    , Solution(..)          -- Instance of: Show
+      Equation(..)          -- Instances: Show
+    , Solution(..)          -- Instances: Show
     , Z
     -- * Equation Solving
     , mergeSolutions        -- :: Solution -> Solution -> Solution
@@ -29,10 +29,10 @@ module Math.Diophantine.Internal
  -- , solveHyperbolic       -- :: Equation -> Solution
     ) where
 
-import Control.Arrow             ((***))
-import Data.List                 ((\\))
-import Data.Maybe                (fromMaybe)
-import Data.Ratio                ((%),numerator,denominator)
+import Control.Arrow ((***))
+import Data.List     ((\\))
+import Data.Maybe    (fromMaybe)
+import Data.Ratio    ((%),numerator,denominator)
 
 -- -------------------------------------------------------------------------- --
 -- Data types.
@@ -63,7 +63,23 @@ data Equation = GeneralEquation Z Z Z Z Z Z      -- ^ A general quadratic
               | ElipticalEquation Z Z Z Z Z Z    -- ^ Eliptical equations.
               | ParabolicEquation Z Z Z Z Z Z    -- ^ Parabolic equations.
               | HyperbolicEquation Z Z Z Z Z Z   -- ^ Hyperbolic equations.
-                deriving Show
+
+instance Show Equation where
+    show (LinearEquation d e f)
+        = show d ++ "x + " ++ show e ++ "y + " ++ show f ++ " = 0"
+    show (SimpleHyperbolicEquation b d e f)
+        = show b ++ "xy + " ++ show d ++ "x + " ++ show e ++ "y + "
+          ++ show f ++ " = 0"
+    show (ElipticalEquation a b c d e f)
+        = show a ++ "x^2 + " ++ show b ++ "xy + " ++ show c ++ "y^2 + "
+          ++ show d ++ "x + " ++ show e ++ "y + " ++ show f ++ " = 0"
+    show (ParabolicEquation a b c d e f)
+        = show a ++ "x^2 + " ++ show b ++ "xy + " ++ show c ++ "y^2 + "
+          ++ show d ++ "x + " ++ show e ++ "y + " ++ show f ++ " = 0"
+    show (HyperbolicEquation a b c d e f)
+        = show a ++ "x^2 + " ++ show b ++ "xy + " ++ show c ++ "y^2 + "
+          ++ show d ++ "x + " ++ show e ++ "y + " ++ show f ++ " = 0"
+    show e@(GeneralEquation{}) = show $ specializeEquation e
 
 -- -------------------------------------------------------------------------- --
 -- Helper functions.
@@ -86,7 +102,7 @@ divisors n =
 
 -- | Returns True iff n is a perfect square.
 isSquare :: Integral a => a -> Bool
-isSquare n = (intSqrt n)^2 == n
+isSquare n = intSqrt n ^ 2 == n
 
 
 -- | Preforms square roots on perfect squares.
@@ -282,7 +298,7 @@ solveHyperbolic (HyperbolicEquation a b c d e f)
               k  = intSqrt $ b^2 - 4 * a * c
               ys = [ (y,u) | u <- us
                    , let yn = (4 * a * f) % u
-                   , let y' = (u + (numerator yn)) % (2 * k)
+                   , let y' = (u + numerator yn) % (2 * k)
                    , let y  = numerator y'
                    , denominator yn == 1
                    , denominator y' == 1
@@ -292,7 +308,7 @@ solveHyperbolic (HyperbolicEquation a b c d e f)
                          , let x  = numerator x'
                          , denominator x' == 1
                          ]
-        | d == e && e == 0 && f /= 0 && not (f `rem` (foldl1 gcd [a,b,c]) == 0)
+        | d == e && e == 0 && f /= 0 && f `rem` foldl1 gcd [a,b,c] /= 0
             = if 4 * f^2 < b^2 - 4 * a * c
                 then NoSolutions
                 else error "not yet implemented"
