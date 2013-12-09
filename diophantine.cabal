@@ -33,5 +33,6 @@ source-repository head
 
 library
   exposed-modules:     Math.Diophantine, Math.Diophantine.Internal
+  other-modules:       Math.Diophantine.Parser
   build-depends:       base ==4.6.*
   hs-source-dirs:      .

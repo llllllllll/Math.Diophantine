@@ -40,9 +40,9 @@ tokenize []  = []
 tokenize str = let (t,s) = getToken str
                in t:tokenize s
 
--- | Reads an 'Equation' as a 'String'. Equations must be in set = 0.
--- Order of the terms does not matter, however, the equality and constant term
--- should come last if given.
+-- | Reads an 'Equation' as a 'String'. Equations must be set equal to 0.
+-- Order of the terms does not matter expect for constant term, and " = 0",
+-- which should come last if given.
 --
 -- >>> readEquation "-5y + 2x - 3xy + 2"
 -- -3xy + 2x + -5y + 2 = 0
