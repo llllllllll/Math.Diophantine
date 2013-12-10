@@ -67,30 +67,37 @@ data Equation = GeneralEquation Z Z Z Z Z Z      -- ^ A general quadratic
 instance Show Equation where
     show (LinearEquation 0 0 0) = "0 = 0"
     show (LinearEquation d e f)
-        = cShow d "x" ++ cShow e " + y" ++ fShow f
+        = dropWhile (`notElem`"123456789xy") $ cShow d "x" ++ cShow e "y"
+          ++ fShow f
     show (SimpleHyperbolicEquation b d e f)
-        = cShow b "xy" ++ cShow d " + x" ++ cShow e " + y" ++ fShow f
+        = dropWhile (`notElem`"123456789xy") $ cShow b "xy" ++ cShow d "x"
+          ++ cShow e "y" ++ fShow f
     show (ElipticalEquation a b c d e f)
-        = cShow a "x^2" ++ cShow b " + xy" ++ cShow c " + y^2"
-          ++ cShow d " + x" ++ cShow e " + y" ++ fShow f
+        = dropWhile (`notElem`"123456789xy") $ cShow a "x^2" ++ cShow b "xy"
+          ++ cShow c "y^2" ++ cShow d "x" ++ cShow e "y" ++ fShow f
     show (ParabolicEquation a b c d e f)
-        = cShow a "x^2" ++ cShow b " + xy" ++ cShow c " + y^2"
-          ++ cShow d " + x" ++ cShow e " + y" ++ fShow f
+        = dropWhile (`notElem`"123456789xy") $ cShow a "x^2" ++ cShow b "xy"
+          ++ cShow c "y^2" ++ cShow d "x" ++ cShow e "y" ++ fShow f
     show (HyperbolicEquation a b c d e f)
-        = cShow a "x^2" ++ cShow b " + xy" ++ cShow c " + y^2"
-          ++ cShow d " + x" ++ cShow e " + y" ++ fShow f
+        = dropWhile (`notElem`"123456789xy") $ cShow a "x^2" ++ cShow b "xy"
+          ++ cShow c "y^2" ++ cShow d "x" ++ cShow e "y" ++ fShow f
     show e@(GeneralEquation{}) = show $ specializeEquation e
 
 -- | Helper function for Show Equation to help show coefficients.
 cShow :: Z -> String -> String
-cShow 0 _ = ""
-cShow 1 v = v
-cShow n v = let (h,t) = span (`notElem` "xy") v
-            in h ++ show n ++ t
+cShow 0 _    = ""
+cShow 1 v    = " + " ++ v
+cShow (-1) v = " - " ++ v
+cShow n v
+    | n < 0 = " - " ++ show (abs n) ++ v
+    | n > 0 = " + " ++ show n ++ v
 
+-- | Helper function for Show Equation to help show coefficients.
 fShow :: Z -> String
 fShow 0 = " = 0"
-fShow n = " + " ++ show n ++ " = 0"
+fShow n
+    | n < 0 = " - " ++ show (abs n) ++ " = 0"
+    | n > 0 = " + " ++ show n ++ " = 0"
 
 -- -------------------------------------------------------------------------- --
 -- Helper functions.
@@ -156,7 +163,7 @@ solveLinear (LinearEquation d e f)
                              (u,v) = extendedGCD d e
                          in if f == 0
                               then ZxZ
-                              else solve' d e f g u v
+                              else NoSolutions
     | d == 0 && e /= 0 = let g     = gcd d e
                              (u,v) = extendedGCD d e
                          in if f `mod` e == 0

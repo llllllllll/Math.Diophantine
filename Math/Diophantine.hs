@@ -32,7 +32,11 @@ import Math.Diophantine.Parser
 -- Data types.
 
 -- | A way to report an error in solving.
-data SolveError = SolveError String deriving Show
+data SolveError = SolveError ReadError -- ^ Represents a read error when reading
+                                       -- the equation from a string.
+                | HyperbolicError      -- ^ The error when you try to solve a
+                                       -- hyperbolic equation.
+                  deriving Show
 
 -- -------------------------------------------------------------------------- --
 -- Exported functions.
@@ -41,7 +45,6 @@ data SolveError = SolveError String deriving Show
 toMaybeList :: Solution -> Maybe [(Z,Z)]
 toMaybeList (SolutionSet ns) = Just ns
 toMaybeList _                = Nothing
-
 
 -- | Determines what type of equation to solve for, and then calls the
 -- appropriate solve function. Example:
@@ -54,4 +57,10 @@ solve e = case specializeEquation e of
               e@(SimpleHyperbolicEquation{}) -> Right $ solveSimpleHyperbolic e
               e@(ElipticalEquation{})        -> Right $ solveEliptical        e
               e@(ParabolicEquation{})        -> Right $ solveParabolic        e
-              e@(HyperbolicEquation{})       -> Left  $ SolveError "hyperbolic"
+              e@(HyperbolicEquation{})       -> Left HyperbolicError
+
+-- | Read an 'Equation' out of a 'String', and then solve it.
+solveString :: String -> Either SolveError Solution
+solveString str = case readEquation str of
+                      Right eq -> solve eq
+                      Left e   -> Left $ SolveError e
