@@ -23,6 +23,7 @@ module Math.Diophantine
     , mergeSolutions            -- :: Solution -> Solution -> Solution
     -- * Equation Solving
     , solve                     -- :: Equation -> Solution
+    , solveString               -- :: String -> Solution
     ) where
 
 import Math.Diophantine.Internal
