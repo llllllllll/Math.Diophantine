@@ -6,11 +6,11 @@ description:
     .
     This library is designed to solve for equations where:
     .
-      * the form is: ax^2 + bxy + cy^2 + dx + ey + f = 0
+      * The form is: ax^2 + bxy + cy^2 + dx + ey + f = 0
     .
       * a,b,c,d,e,f are integers.
     .
-      * soltutions are restricted to x and y are also integers.
+      * Solutions are restricted to x and y are also integers.
     .
     This library breaks down equations based on their type to solve them most
     efficiently. This library supports linear, simple hyperbolic, eliptical, and
@@ -22,7 +22,7 @@ license:             GPL-2
 license-file:        LICENSE
 author:              Joe Jevnik
 maintainer:          Joe Jevnik <joejev@gmail.com>
-copyright:           Joe Jevnik 2013
+copyright:           Joe Jevnik 2014
 category:            Math
 build-type:          Simple
 cabal-version:       >=1.8
@@ -33,6 +33,6 @@ source-repository head
 
 library
   exposed-modules:     Math.Diophantine, Math.Diophantine.Internal
-  other-modules:       Math.Diophantine.Parser
+  other-modules:       Math.Diophantine.Parser Math.Diophantine.Grammar
   build-depends:       base ==4.6.*
   hs-source-dirs:      .
