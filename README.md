@@ -32,7 +32,8 @@ import the library with:
 
     import module Math.Diophantine
 
-The most import function of this library is `solve :: Equation -> Solution`.
+The most import function of this library is `solve :: Equation -> Either
+SolveError Solution`.
 The types of equations that this library can solve are defined by the different
 instances of `Equation`:
 
@@ -70,8 +71,12 @@ code. The solve* functions will return a Solution. Solutions are as follows:
   set, they will satisfy the given equation.
 
 
+There is also a `readEquation :: String -> Either ParseError Equation` and
+`solveString :: String -> Either SolveError Solution` for parsing equations out
+of strings. This will do some basic simplification of the equation.
+
+
 TODO:
 -----
 
 - Finish the implementation of solveHyperbolic
-- Write an equation parser from a string.

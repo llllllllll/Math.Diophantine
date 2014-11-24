@@ -15,9 +15,10 @@ module Math.Diophantine
       Equation(GeneralEquation) -- instances: Show
     , Solution(..)              -- instances: Eq, Show
     , Z
-    , SolveError(..)            -- Instances: Show
+    , SolveError(..)            -- instances: Show
+    , ParseError(..)            -- instances: Show
     -- * Utilities
-    , readEquation              -- :: String -> Equation
+    , readEquation              -- :: String -> Either ParseError Equation
     , specializeEquation        -- :: Equation -> Equation
     , toMaybeList               -- :: Solution -> Maybe [(Integer,Integer)]
     , mergeSolutions            -- :: Solution -> Solution -> Solution
