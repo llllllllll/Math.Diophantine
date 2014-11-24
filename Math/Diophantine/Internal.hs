@@ -132,6 +132,7 @@ isSquare n = intSqrt n ^ 2 == n
 
 
 -- | Preforms square roots on perfect squares.
+--
 -- WARNING: Assumes the argument is a perfect square and does not check.
 intSqrt :: Integral a => a -> a
 intSqrt = round . sqrt . fromIntegral
@@ -150,6 +151,7 @@ mergeSolutions NoSolutions ZxZ               = ZxZ
 mergeSolutions ZxZ NoSolutions               = ZxZ
 mergeSolutions ZxZ ZxZ                       = ZxZ
 
+
 -- | Detirmines what kind of equation form a 'GeneralEquation' fits.
 -- If you pass a non 'GeneralEquation' to this function, it is the same as id.
 specializeEquation :: Equation -> Equation
@@ -161,10 +163,15 @@ specializeEquation (GeneralEquation a b c d e f)
     | b^2 - 4 * a * c > 0        = HyperbolicEquation a b c d e f
 specializeEquation e             = e
 
+
 -- -------------------------------------------------------------------------- --
 -- Solving functions.
 
 -- | Solves for 'Equation's in the form of dx + ey + f = 0
+--
+-- WARNING: This expects that the 'Equation' is actually a 'LinearEquation';
+-- it is safer to just call solve unless you have already verified that
+-- the equation is linear.
 solveLinear :: Equation -> Solution
 solveLinear (LinearEquation d e f)
     | d == 0 && e == 0 = let g     = gcd d e
@@ -206,6 +213,10 @@ solveLinear e =
 
 
 -- | Solves for 'Equation's in the form of bxy + dx + ey + f = 0
+--
+-- WARNING: This expects that the 'Equation' is actually a
+-- 'SimpleHyperbolicEquation'; it is safer to just call solve unless you have
+-- already verified that the equation is simple hyperbolic.
 solveSimpleHyperbolic :: Equation -> Solution
 solveSimpleHyperbolic (SimpleHyperbolicEquation b d e f)
     | b == 0 = error "Does not match SimpleHyperbolicEquation form"
@@ -229,6 +240,10 @@ solveSimpleHyperbolic e =
 
 -- | Solves for 'Equation's in the form of ax^2 + bxy + cy^2 + dx + ey + f = 0
 -- when b^2 - 4ac < 0
+--
+-- WARNING: This expects that the 'Equation' is actually an 'ElipticalEquation';
+-- it is safer to just call solve unless you have already verified that the
+-- equation is eliptical.
 solveEliptical :: Equation -> Solution
 solveEliptical (ElipticalEquation a b c d e f) =
     if (2 * b * e - 4 * c * d)^2 - 4 * (b^2 - 4 * a * c) * (e^2 - 4 * c * f) > 0
@@ -269,6 +284,10 @@ solveEliptical e =
 
 -- | Solves for 'Equation's in the form of ax^2 + bxy + cy^2  + dx + ey + f = 0
 -- when b^2 - 4ac = 0
+--
+-- WARNING: This expects that the 'Equation' is actually a 'ParabolicEquation';
+-- it is safer to just call solve unless you have already verified that the
+-- equation is parabolic.
 solveParabolic :: Equation -> Solution
 solveParabolic (ParabolicEquation a b c d e f) =
     let g  = if a >= 0
@@ -316,6 +335,10 @@ solveParabolic e =
 -- TODO:
 -- | Solves for 'Equation's in the form of ax^2 + bxy + cy^2 + f = 0
 -- when b^2 - 4ac > 0
+--
+-- WARNING: This expects that the 'Equation' is actually a
+-- 'HyperbolicEquation'; it is safer to just call solve unless you have already
+-- verified that the equation is eliptical.
 solveHyperbolic :: Equation -> Solution
 solveHyperbolic (HyperbolicEquation a b c d e f)
     | d == e && e == f && f == 0
