@@ -20,13 +20,16 @@ description:
 homepage:            https://github.com/llllllllll/Math.Diophantine
 license:             GPL-2
 license-file:        LICENSE
-author:              llllllllll
-maintainer:          joejev@gmail.com
-
+author:              Joe Jevnik
+maintainer:          Joe Jevnik <joejev@gmail.com>
+copyright:           Joe Jevnik 2014
 category:            Math
 build-type:          Simple
 extra-source-files:  README.md
 cabal-version:       >=1.10
+source-repository head
+ type: git
+ location: https://github.com/llllllllll/Math.Diophantine.git
 
 library
   exposed-modules:     Math.Diophantine
