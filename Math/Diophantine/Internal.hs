@@ -17,7 +17,7 @@ module Math.Diophantine.Internal
     (
     -- * Data
       Equation(..)          -- Instances: Show
-    , Solution(..)          -- Instances: Show
+    , Solution(..)          -- Instances: Show, Eq
     , Z
     -- * Equation Solving
     , mergeSolutions        -- :: Solution -> Solution -> Solution
@@ -43,15 +43,18 @@ data Solution = ZxZ                 -- ^ All Integer pairs satisfy the equation.
               | SolutionSet [(Z,Z)] -- ^ The set of pairs (x,y) that satisfy the
                                     -- equation. These are not in any particular
                                     -- order, and may contain duplicates.
-                deriving Eq
+                deriving (Eq)
+
 
 instance Show Solution where
     show  ZxZ             = "{(x,y) | x <- Z, y <- Z}"
     show  NoSolutions     = "No Solutions"
     show (SolutionSet ns) = show ns
 
+
 -- | An alias for 'Integer', used to shorten type signatures.
 type Z = Integer
+
 
 -- | A way to setup an equation in the form of:
 --
@@ -64,24 +67,26 @@ data Equation = GeneralEquation Z Z Z Z Z Z      -- ^ A general quadratic
               | ParabolicEquation Z Z Z Z Z Z    -- ^ Parabolic equations.
               | HyperbolicEquation Z Z Z Z Z Z   -- ^ Hyperbolic equations.
 
+
 instance Show Equation where
     show (LinearEquation 0 0 0) = "0 = 0"
     show (LinearEquation d e f)
-        = dropWhile (`notElem`"123456789xy") $ cShow d "x" ++ cShow e "y"
+        = dropWhile (`elem` " +") $ cShow d "x" ++ cShow e "y"
           ++ fShow f
     show (SimpleHyperbolicEquation b d e f)
-        = dropWhile (`notElem`"123456789xy") $ cShow b "xy" ++ cShow d "x"
+        = dropWhile (`elem` " +") $ cShow b "xy" ++ cShow d "x"
           ++ cShow e "y" ++ fShow f
     show (ElipticalEquation a b c d e f)
-        = dropWhile (`notElem`"123456789xy") $ cShow a "x^2" ++ cShow b "xy"
+        = dropWhile (`elem` " +") $ cShow a "x^2" ++ cShow b "xy"
           ++ cShow c "y^2" ++ cShow d "x" ++ cShow e "y" ++ fShow f
     show (ParabolicEquation a b c d e f)
-        = dropWhile (`notElem`"123456789xy") $ cShow a "x^2" ++ cShow b "xy"
+        = dropWhile (`elem` " +") $ cShow a "x^2" ++ cShow b "xy"
           ++ cShow c "y^2" ++ cShow d "x" ++ cShow e "y" ++ fShow f
     show (HyperbolicEquation a b c d e f)
-        = dropWhile (`notElem`"123456789xy") $ cShow a "x^2" ++ cShow b "xy"
+        = dropWhile (`elem` " +") $ cShow a "x^2" ++ cShow b "xy"
           ++ cShow c "y^2" ++ cShow d "x" ++ cShow e "y" ++ fShow f
     show e@(GeneralEquation{}) = show $ specializeEquation e
+
 
 -- | Helper function for Show Equation to help show coefficients.
 cShow :: Z -> String -> String
@@ -92,12 +97,14 @@ cShow n v
     | n < 0 = " - " ++ show (abs n) ++ v
     | n > 0 = " + " ++ show n ++ v
 
+
 -- | Helper function for Show Equation to help show coefficients.
 fShow :: Z -> String
 fShow 0 = " = 0"
 fShow n
     | n < 0 = " - " ++ show (abs n) ++ " = 0"
     | n > 0 = " + " ++ show n ++ " = 0"
+
 
 -- -------------------------------------------------------------------------- --
 -- Helper functions.
@@ -111,12 +118,13 @@ extendedGCD a b = extendedGCD' 0 1 b 1 0 a
           let q = r' `div` r
           in extendedGCD' (s' - q * s) (t' - q * t) (r' - q * r)  s t r
 
+
 -- | Returns a list of the divisors of n.
 divisors :: Integral a => a -> [a]
 divisors n =
-    n:1:(concat [[x,n `div` x] | x <- [2..intSqrt n]
-                , n `rem` x == 0]
-         \\ [intSqrt n | isSquare n])
+    n : 1 : (concat [[x,n `div` x] | x <- [2..intSqrt n], n `rem` x == 0]
+                        \\ [intSqrt n | isSquare n])
+
 
 -- | Returns True iff n is a perfect square.
 isSquare :: Integral a => a -> Bool
@@ -169,6 +177,11 @@ solveLinear (LinearEquation d e f)
                          in if f `mod` e == 0
                               then solve' d e f g u v
                               else NoSolutions
+    | d /= 0 && e == 0 = let g     = gcd d e
+                             (u,v) = extendedGCD d e
+                         in if f `mod` d == 0
+                              then solve' d e f g u v
+                              else NoSolutions
     | d /= 0 && e /= 0 = let g     = gcd d e
                              (u,v) = extendedGCD d e
                          in if f `mod` g  == 0
@@ -191,6 +204,7 @@ solveLinear e =
         e'@(LinearEquation{}) -> solveLinear e'
         _ ->  error "solveLinear requires a linear equation"
 
+
 -- | Solves for 'Equation's in the form of bxy + dx + ey + f = 0
 solveSimpleHyperbolic :: Equation -> Solution
 solveSimpleHyperbolic (SimpleHyperbolicEquation b d e f)
@@ -211,6 +225,7 @@ solveSimpleHyperbolic e =
     case specializeEquation e of
         e'@(SimpleHyperbolicEquation{}) -> solveSimpleHyperbolic e'
         _ -> error "solveSimpleHyperbolic requires a simple hyperbolic equation"
+
 
 -- | Solves for 'Equation's in the form of ax^2 + bxy + cy^2 + dx + ey + f = 0
 -- when b^2 - 4ac < 0
@@ -250,6 +265,7 @@ solveEliptical e =
     case specializeEquation e of
         e'@(ElipticalEquation{}) -> solveEliptical e'
         _ -> error "solveEliptical requires an eliptical equation"
+
 
 -- | Solves for 'Equation's in the form of ax^2 + bxy + cy^2  + dx + ey + f = 0
 -- when b^2 - 4ac = 0
@@ -295,6 +311,7 @@ solveParabolic e =
     case specializeEquation e of
         e'@(ParabolicEquation{}) -> solveParabolic e'
         _ -> error "solveParabolic requires a parabolic equation."
+
 
 -- TODO:
 -- | Solves for 'Equation's in the form of ax^2 + bxy + cy^2 + f = 0
