@@ -22,22 +22,33 @@ module Math.Diophantine
     , toMaybeList               -- :: Solution -> Maybe [(Integer,Integer)]
     , mergeSolutions            -- :: Solution -> Solution -> Solution
     -- * Equation Solving
-    , solve                     -- :: Equation -> Solution
-    , solveString               -- :: String -> Solution
+    , solve                     -- :: Equation -> Either SolveError Solution
+    , solveString               -- :: String -> Either SolveError Solution
     ) where
 
-import Math.Diophantine.Internal
-import Math.Diophantine.Parser
+import Math.Diophantine.Internal ( Equation(..)
+                                 , Solution(..)
+                                 , Z(..)
+                                 , mergeSolutions
+                                 , specializeEquation
+                                 , solveLinear
+                                 , solveSimpleHyperbolic
+                                 , solveEliptical
+                                 , solveParabolic
+                                 )
+import Math.Diophantine.Parser ( ParseError(..)
+                               , readEquation
+                               )
 
 -- -------------------------------------------------------------------------- --
 -- Data types.
 
 -- | A way to report an error in solving.
-data SolveError = SolveError ReadError -- ^ Represents a read error when reading
-                                       -- the equation from a string.
-                | HyperbolicError      -- ^ The error when you try to solve a
-                                       -- hyperbolic equation.
-                  deriving Show
+data SolveError = SolveError ParseError -- ^ Represents a read error when
+                                        -- reading the equation from a string.
+                | HyperbolicError       -- ^ The error when you try to solve a
+                                        -- hyperbolic equation.
+                  deriving (Show)
 
 -- -------------------------------------------------------------------------- --
 -- Exported functions.
@@ -46,6 +57,7 @@ data SolveError = SolveError ReadError -- ^ Represents a read error when reading
 toMaybeList :: Solution -> Maybe [(Z,Z)]
 toMaybeList (SolutionSet ns) = Just ns
 toMaybeList _                = Nothing
+
 
 -- | Determines what type of equation to solve for, and then calls the
 -- appropriate solve function. Example:
@@ -60,8 +72,10 @@ solve e = case specializeEquation e of
               e@(ParabolicEquation{})        -> Right $ solveParabolic        e
               e@(HyperbolicEquation{})       -> Left HyperbolicError
 
+
 -- | Read an 'Equation' out of a 'String', and then solve it.
+-- This can fail because the string is not a valid equation.
 solveString :: String -> Either SolveError Solution
-solveString str = case readEquation str of
-                      Right eq -> solve eq
-                      Left e   -> Left $ SolveError e
+solveString e = case readEquation e of
+                    Right eq -> solve eq
+                    Left  er -> Left $ SolveError er
