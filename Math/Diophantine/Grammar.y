@@ -95,6 +95,15 @@ instance Show ParseError where
     show PowerOutOfBounds = "Power out of bounds"
     show BadGrammar       = "Bad equation grammar"
 
+-- | Functor instance for the parser 
+instance Functor EqParser where
+    fmap f (Valid a)    = Valid (f a)
+    fmap f (Invalid pe) = (Invalid pe)
+
+-- | Applicative functor instance for the parser
+instance Applicative EqParser where
+    pure t              = Valid t
+    (<*>)               = ap
 
 -- | Monad instance for the parser.
 instance Monad EqParser where
